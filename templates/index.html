@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link href="/static/bootstrap-3.3.7-dist/css/bootstrap.css" rel="stylesheet">
+    <link href="/static/css/wcss.css" rel="stylesheet">
+
+    <script src="/static/jquery-3.3.1.min.js"></script>
+</head>
+<body style="background: #CCCCCC;">
+{% block nav %}
+<ul class="nav nav-tabs col-lg-8 col-lg-offset-2">
+    <li role="presentation" class="active"><a href="/">转发{{ path}}</a></li>
+    <li role="presentation" ><a href="{{ url_for ('search') }}">搜索</a></li>
+        <li role="presentation" class=""><a href="/vote">投票</a></li>
+
+    <li role="presentation">{% if user_code %}<a href="javascript:void(0)">{{ user_code }}</a>{% else %}
+        <a for="login" href="javascript:void(0)">登录</a>{% endif %}</li>
+    <li class="pull-right"><a>qq:2433230181</a></li>
+</ul>
+{% endblock %}
+<div class="col-lg-12 container-fluid" style="background: pink;min-height: 500px;padding: 0px">
+    {% block content %}
+        <div class="col-lg-2 col-md-2 col-sm-2 col-xs-2" style="background: lightskyblue;min-height:500px">
+            <p>昨日转发最多的五条微博</p>
+
+            {% for forward in yes_list %}
+                <p class="repost_url" style="cursor: pointer"><a target="_blank"
+                                                                 href="{{ forward[0] }}">{{ forward[2] }}</a>转发次数：{{ forward[1] }}
+                </p>
+            {% endfor %}
+        </div>
+
+        <div class="col-lg-8 col-md-8 col-xs-8 col-sm-8 container-fluid account-box">
+            <div class="col-lg-10">
+                <a id="select-all" href="javascript:void(0)">全选</a>
+                <span class="account-span hidden" style="cursor: pointer"><input name="account" type="checkbox"
+                                                                                 value=""></span>
+                {% for account in account_list %}
+                    <span class="account-span" style="cursor: pointer"><input name="account" type="checkbox"
+                                                                              checked="checked"
+                                                                              value="{{ account }}">{{ account }}</span>
+                {% endfor %} <a><span class="glyphicon glyphicon-plus" style="color:grey;cursor:pointer"
+                                      aria-hidden="true"></span><span
+                    class="glyphicon glyphicon-minus hidden" style="color:grey;cursor:pointer"
+                    aria-hidden="true"></span></a>
+            </div>
+            <div class="col-lg-2">当前是转发是{{ interval }}分钟一次
+                <select>{% for i in [2,5,10,20] %}
+                    <option value={{ i }} {% if i == interval %}   selected="selected" {% endif %}>{{ i }}</option>{% endfor %}
+                </select>
+                <button id="s_interval" class="btn btn-info">设置</button>
+                <span style="color:grey">重启生效</span>
+            </div>
+            <div class="hidden col-lg-8 col-lg-offset-1  add-account">
+                <input name="user" placeholder="请输入账号" maxlength="20">
+                <input name="passwd" type="password" maxlength="20" placeholder="请输入密码">
+                <button id="add_account" class="btn btn-success">保存</button>
+            </div>
+            <div class="func_box  hidden" id="login"
+                 style="position: absolute;top:2%;background:lightgrey;left: 25%;width: 400px;height:100px;z-index: 1000;padding-top: 20px">
+                <input name='code' class="col-lg-8 col-lg-offset-2" placeholder="输入登陆码">
+                <button class="btn btn-primary pull-right">提交</button>
+            </div>
+
+            <div class=" col-lg-12 func_box " id="foward">
+                <div class="col-lg-12">
+                    <div class="col-lg-12">
+                        <button id="add-box" class="pull-right btn btn-info">添加</button>
+                        <button id="set_comment" class="pull-right btn btn-info">{% if comment %}取消同时评论{% else %}
+                            设置同时评论{% endif %}</button>
+                        <button id="set_t_visible" class="pull-right btn btn-info">{% if visible %}设为不可见模式{% else %}
+                            设为可见模式{% endif %}</button>
+                    </div>
+                    <div class="for-box col-lg-12">
+                        <input name='fo_url' class="col-lg-12" placeholder="{% if not address %}输入需要转发的微博地址{% endif %}"
+                               value="{% if address %}{{ address }}{% endif %}">
+                        <textarea style="width:100%;height: 100px" name="fo_content" class="col-lg-12"
+                                  placeholder="输入需要转发的内容，每条用两个空格隔开"></textarea>
+                    </div>
+                    <button class="btn btn-primary pull-right {% if grade == 0 %} disabled{% endif %} {% if not user_code %} disabled{% endif %}"" type="submit"{% if user_code %}  id="fo_btn" {% endif %}>提交 </button>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-2 col-xs-2 col-sm-2" style="background: lightskyblue;min-height: 500px">
+            <div>{% for data in data_list %}
+                <p>
+                    <u>{{ data[0] }}</u>总转发了{{ data[3] }}条，今天已转发{{ data[4] }}条，昨天转发了{{ data[1] }}条，最近七天每天发了{{ data[2]//7 }}条微博
+                </p>
+            {% endfor %}</div>
+            <p> 有<a id="task_count">{{ task_count }}</a> 条微博正在等待转发</p>
+            {% if error_tasks %}
+                <p>以下{{ error_tasks.__len__() }} 条转发错误 <a  href="{{ url_for ('del_tasks') }}">清除</a></p>
+
+            {% endif %}
+            {% for task in error_tasks %}
+                <p>转发账号：{{ task[0] }}网址：<a href=" {{ task[1] }}" target="_blank"> 转发内容:{{ task[2] }}</a></p>
+            {% endfor %}
+        </div>
+
+
+
+    {% endblock %}
+</div>
+<script type="text/javascript">
+    bind_set();
+
+    function bind_set() {
+        $('#set_t_visible').click(function () {
+            $.ajax({
+                url: "{{ url_for ('set_t_visible') }}",
+                type: 'GET',
+                success: function (arg) {
+                    if (arg.status == 1) {
+                        if (arg.data) {
+                            $('#set_t_visible').text('设为不可见模式');
+                        } else {
+                            $('#set_t_visible').text('设为可见模式');
+                        }
+                    }
+                }
+            })
+        });
+        $('#set_comment').click(function () {
+            $.ajax({
+                url: "{{ url_for ('set_comment') }}",
+                type: 'GET',
+                success: function (arg) {
+                    if (arg.status == 1) {
+                        if (arg.data) {
+                            $('#set_comment').text('取消同时评论')
+
+                        }
+                        else {
+                            $('#set_comment').text('设置同时评论')
+
+                        }
+                    } else {
+                    }
+                }
+            })
+        });
+        $('#s_interval').click(function () {
+            var interval = $(this).siblings('select').val();
+            data = {
+                'interval': interval
+            };
+            $.ajax({
+                type: 'GET',
+                url: '{{url_for("set_interval")}}',
+                data: data,
+
+                success: function (arg) {
+                    if (arg['status'] == 1) {
+                        window.location.href = '/'
+                    }
+
+                }
+            })
+        });
+
+    }
+
+    function bind_add_account() {
+        $('#select-all').click(function () {
+            $('input[type="checkbox"]').each(function () {
+                $(this).prop("checked", true);
+            });
+        });
+
+        $('.glyphicon-plus').click(function () {
+            $('.add-account').removeClass('hidden');
+            $('.glyphicon-minus').removeClass('hidden');
+            $('.glyphicon-plus').addClass('hidden')
+        });
+        $('.glyphicon-minus').click(function () {
+            $('.add-account').addClass('hidden');
+            $('.glyphicon-plus').removeClass('hidden');
+            $('.glyphicon-minus').addClass('hidden')
+        });
+        $('#add_account').click(function () {
+            var user = $('input[name="user"]').val().trim();
+            var passwd = $('input[name="passwd"]').val().trim();
+            var data = {'user': user, 'passwd': passwd};
+            $(this).addClass('disabled');
+            $(this).text('等待验证');
+            $.ajax({
+                type: 'POST',
+                url: '{{url_for("add_account")}}',
+                data: data,
+                success: function (arg) {
+                    $('#add_account').text('保存');
+                    $('#add_account').removeClass('disabled');
+                    if (arg.status == 1) {
+                        var span_ele = $('.account-box div').children('span').first().clone(true);
+                        var input_ele = $(span_ele).children('input').first().clone(true);
+                        $(span_ele).text(data['user']).removeClass('hidden');
+                        $(input_ele).val(data['user']);
+                        $(span_ele).prepend(input_ele);
+                        $('input[name="user"]').val('');
+                        $('input[name="passwd"]').val('');
+
+                        $('.glyphicon-plus').parent().before(span_ele);
+                          $('.add-account').addClass('hidden');
+            $('.glyphicon-plus').removeClass('hidden');
+            $('.glyphicon-minus').addClass('hidden')
+                    }
+                    else {
+                        alert(arg['msg'])
+                    }
+                }
+            })
+        });
+        $('#select-all').dblclick(function () {
+            $('input[type="checkbox"]').each(function () {
+                $(this).prop("checked", false);
+            });
+        });
+        $('.account-span').dblclick(function () {
+            var user = $(this).text();
+            var that = this;
+            var data = {'user': user};
+            $.ajax({
+                type: 'GET',
+                url: '{{url_for("del_account")}}',
+                data: data,
+                success: function (arg) {
+                    if (arg.status == 1) {
+                        $(that).empty();
+                    } else {
+                        alert(arg.msg)
+                    }
+                }
+            })
+
+        });
+    }
+
+    bind_add_account();
+
+    function bind_add_box() {
+        $('#add-box').click(function () {
+            var div_ele = $($(this).parent().siblings('div').first()).clone();
+
+            $(this).parent().siblings('div').last().after(div_ele);
+        });
+    }
+
+    function bind_add_repost() {
+        $('.repost_url').dblclick(function () {
+            var url = $(this).children('a').attr('href');
+            var text = $(this).children('a').text();
+            var input_val = $('.for-box').first().children('input').val();
+            if (input_val) {
+                var div_ele = $('.for-box').first().clone();
+                $(div_ele).children('input').val(url);
+                $(div_ele).children('textarea').val(text);
+                $('.for-box').last().after(div_ele);
+            } else {
+                $('.for-box').first().children('input').val(url);
+                $('.for-box').first().children('textarea').val(text);
+            }
+
+
+        });
+    }
+
+    bind_add_repost();
+    bind_add_box();
+
+    function bind_switch() {
+        $('.nav > li').each(function () {
+            $(this).click(function () {
+                $(this).addClass('active');
+                $(this).siblings('li').removeClass('active');
+                var id = $(this).children('a').attr('for');
+                $('#' + id).removeClass('hidden');
+                $('#' + id).siblings('div').addClass('hidden');
+
+            });
+        });
+    }
+
+    bind_switch();
+
+    function bind_foward_submit() {
+        $('#fo_btn').click(function () {
+            var divs = $('#fo_btn').siblings('div .for-box');
+            divs.each(function () {
+                var fo_url = $(this).children('input').val().trim();
+                var fo_content = $(this).children('textarea').val().trim();
+                var accounts = $('input[type="checkbox"]:checked');
+                var account_list = '';
+                for (var i = 0; i < accounts.length; i++) {
+                    account_list += '  ';
+                    account_list += accounts[i].value;
+                }
+                if (!fo_url){
+                    return
+                }
+                $('#fo_btn').addClass('disabled').text('已提交');
+                var data = {
+                    'fo_url': fo_url,
+                    'fo_content': fo_content,
+                    'accounts': account_list,
+
+                };
+                $.ajax({
+                    type: 'POST',
+                    url: '{{url_for("forward")}}',
+                    data: data,
+                    success: function (arg) {
+                        if (arg.status == 1) {
+                            var count = parseInt($('#task_count').text());
+                            $('#task_count').text('').text(count + arg.data);
+                            $('#fo_btn').removeClass('disabled').text('保存');
+                        }
+                        else {
+                            $('#fo_btn').removeClass('disabled').text('保存');
+                            alert(arg.msg)
+                        }
+                    }
+                })
+            });
+
+        })
+    }
+
+    bind_foward_submit();
+
+    function bind_login() {
+        $('#login').children('button').click(function () {
+            var code_val = $('#login').children('input').val();
+            data = {
+                'code': code_val
+            };
+            $.ajax({
+                type: 'GET',
+                url: '{{url_for("login")}}',
+                data: data,
+
+                success: function (arg) {
+                    if (arg.status == 1) {
+                        window.location.href = '/'
+
+                    } else {
+                        alert('用户码错误')
+                        window.location.href = '/'
+
+                    }
+
+
+                }
+            })
+        })
+    }
+
+    bind_login();
+
+    function get_count() {
+        $.ajax({
+            type: 'GET',
+            url: '{{url_for("get_task_count")}}',
+
+            success: function (arg) {
+                $('#task_count').text(arg.data);
+            }
+        })
+    }
+
+    var myVar = setInterval(function () {
+        get_count()
+    }, 3000 * 10);
+</script>
+</body>
+
+</html>
