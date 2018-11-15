@@ -1,0 +1,26 @@
+.func_box{
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+.func_box textarea,input{
+    margin: 10px 0px;
+}
+.op-box div{
+    padding: 0px;
+}
+.op-box {
+    padding: 0px;
+}
+.nav-tabs li{
+    font-family: 微软雅黑;
+    margin-left: 1px;
+    margin-right: 10px;
+}
+.container-fluid {
+    font-family: 微软雅黑;
+}
+#vote-box input{
+    width: 100%;
+    margin-right: 20px;
+    height: 40px;
+}

@@ -1,0 +1,142 @@
+{% extends 'index.html'%}
+{% block nav %}
+<ul class="nav nav-tabs col-lg-8 col-lg-offset-2">
+    <li role="presentation" ><a href="/">转发{{ path}}</a></li>
+    <li role="presentation" class="active"><a href="{{ url_for ('search') }}">搜索</a></li>
+        <li role="presentation" class=""><a href="/vote">投票</a></li>
+
+    <li role="presentation">{% if grade >0 %}<a href="javascript:void(0)">{{ user_code }}</a>{% else %}
+        <a for="login" href="javascript:void(0)">登录</a>{% endif %}</li>
+    <li class="pull-right"><a>qq:2433230181</a></li>
+</ul>
+{% endblock %}
+{% block content %}
+    <div class="col-lg-2 col-md-2"  style="background: lightskyblue;min-height: 500px">
+    <p id="searching" class="hidden">当前正在搜索<a></a>,还有<a></a>次未搜索完</p>
+    </div>
+   <div class="col-lg-8 col-md-8 ">
+   <div class=" col-lg-10" id="keyword-box" >
+   <div>
+          <p style="color: gray">双击删除关键词</p>   <button id="show" class="list-inline btn btn-info">{% if visible %}切换为不可见模式{% else %}切换为可见模式{% endif %}</button>
+
+   </div>
+    <span class="hidden"><a class="keyword" style="cursor: pointer;text-decoration: none" key_id = '' > </a>已搜索<i>0</i>次，还需搜索<i></i>次</span>
+       {% for keyword in keywords %}
+           <span><a class="keyword" style="cursor: pointer;text-decoration: none" key_id = {{ keyword[0] }} >{{ keyword[1] }}</a>已搜索<i>{{ keyword[2] }}</i>次,还需搜索<i>{{ keyword[3] }}  </i>次</span>
+       {% endfor %}
+   </div>
+<div>
+   <input placeholder="请输入关键字" name="keywords" style="width: 80%">
+
+    <input placeholder="请输入整数" value=10 name="expect" style="width: 10%">次
+    </div>
+   <div><button {% if grade >0 %} id="add_keyword" {% endif %}class="btn btn-success pull-right  {% if grade < 1 %} disabled {% endif %}">添加关键词</button></div>
+   </div>
+    <script type="text/javascript">
+    function bind_set_visible() {
+        $('#show').click(function () {
+            $.ajax({
+                url:"{{ url_for ('set_visible') }}",
+                type:'GET',
+                success:function (arg) {
+                    if(arg.status==1){
+                        if(arg.data){
+                            $('#show').text('切换为不可见模式');
+                        }
+                        else{
+                            $('#show').text('切换为可见模式')
+                        }
+
+                    }else{
+                        alert('切换失败')
+                    }
+                }
+            })
+        })
+    }
+    bind_set_visible();
+    function get_searching() {
+        $.ajax({
+            type:'GET',
+            url:"{{ url_for ('get_searching') }}",
+            success:function (arg) {
+                if (arg.status == 1){
+                     if (arg.data[0]){
+                         $('#searching').removeClass('hidden');
+                          $('#searching').children('a').first().text(arg.data[0]);
+
+                     $('#searching').children('a').last().text(arg.data[1]);
+                         $('a[key_id="'+String(arg.data[2])+'"]').siblings('i').last().text(arg.data[1]);
+                          $('a[key_id="'+String(arg.data[2])+'"]').siblings('i').first().text(arg.data[3]);
+
+                     }
+
+                }
+                else{
+                    pass
+                }
+            }
+        });
+    }
+    get_searching();
+    setInterval(get_searching,3000*10);
+function bind_keyword() {
+        $('#add_keyword').click(function () {
+            var content = $('input[name="keywords"]').val().trim();
+       var expect = parseInt($('input[name="expect"]').val().trim());
+            var data ={
+                'content':content,
+                'expect':expect,
+            };
+            $.ajax({
+                url:"{{ url_for ('add_keyword') }}",
+                data:data,
+                type:'GET',
+                success:function (arg) {
+                    if(arg.status==1){
+                       var span_ele =  $('#keyword-box').children('span').first().clone(true);
+                        $(span_ele).children('a').text(content);
+                        $(span_ele).children('a').attr('key_id',arg.id);
+                         $(span_ele).children('i').last().text(arg.data);
+
+                      $(span_ele).removeClass('hidden');
+
+                        $('#keyword-box').children('span').last().after(span_ele);
+                    }
+                    else if(arg.status==2){
+                        $('a[key_id="'+String(arg.id)+'"]').siblings('i').last().text(arg.data)
+                    }
+                    else {
+                        alert(arg.msg);
+                    }
+                }
+            })
+        });
+        $('.keyword').dblclick(function () {
+            var id = $(this).attr('key_id');
+            var that = this;
+            var data = {'id':id};
+            $.ajax({
+                url:"{{ url_for ('delete_keyword') }}",
+                type:'GET',
+                data:data,
+                success:function (arg) {
+                    if(arg.status==1){
+                        $(that).parent().empty();
+                    }
+                    else{
+                        alert(arg.msg)
+                    }
+                }
+            })
+        });
+        $('.keyword').click(function () {
+            var text = $(this).text();
+          $('input[name="keywords"]').val(text);
+
+
+        });
+
+}   bind_keyword()
+    </script>
+{% endblock %}
